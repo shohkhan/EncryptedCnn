@@ -141,6 +141,15 @@ vector<int> poolPlainImage(int poolSize, int width, int length,
 	return pooledPlainImage;
 }
 
+void activateEncryptedImage(vector<Ctxt> encImage, vector<vector<Ctxt>> & images, int sequence) {
+	vector<Ctxt> image;
+	for (unsigned int j = 0; j < encImage.size(); j++) {
+		encImage[j].cube();
+	}
+	images[sequence] = encImage;
+	image.clear();
+}
+
 void poolEncryptedImage(int poolSize, int width, int length, vector<Ctxt> encImage,
 		Ctxt zero, vector<vector<Ctxt>> & pooledImages, int sequence) {
 	vector<Ctxt> pooledImage;
@@ -268,11 +277,11 @@ int main(void) {
 	int poolSize = 2;
 	int stridex = 1;
 	int stridey = 1;
-	int maxFilterSize = 50;
+	int maxFilterSize = 64;
 
 	//Not fixed
-	int width = 28;
-	int length = 28;
+	int width = 32;
+	int length = 32;
 
 	/*** BEGIN INITIALIZATION ***/
 	cout << "Initiating scheme ... " << flush;
@@ -377,66 +386,8 @@ int main(void) {
 	}
 	cout << "done" << endl;
 
-	/**** compare plain and encrypted ****/
-	//Part 1: Pooling
-
-	/*vector<int> pooledPlainImage;
-	pooledPlainImage = poolPlainImage(poolSize, width, length, plainImage);
-	vector<vector<Ctxt>> pooledImages;
-	vector<Ctxt> pooledImage;
-	pooledImages.push_back(pooledImage);
-	FHE_NTIMER_START(po1);
-	poolEncryptedImage(poolSize, width, length, encImage, zero, ref(pooledImages), 0);
-	//vector<Ctxt> pooledImage = poolEncryptedImage(poolSize, width, length, encImage, zero);
-	FHE_NTIMER_STOP(po1);
-	tmp = getTimerByName("po1");
-	times = tmp->getTime();
-	cout << "Time for 1 pool = " << times << endl;
-	pooledImage = pooledImages[0];
-	cout << "Compare Pooled Images" << endl;
-	for (unsigned int i = 0; i < pooledPlainImage.size(); i++) {
-		cout << pooledPlainImage[i] << " " << flush;
-	}
-	cout << endl;
-	cout << pooledImage.size() << endl;
-	for (unsigned int i = 0; i < pooledImage.size(); i++) {
-		ZZX pt;
-		secretKey.Decrypt(pt, pooledImage[i]);
-		cout << pt[0] << " " << flush;
-	}
-	cout << endl;
-	pooledPlainImage.clear();
-	pooledImage.clear();
-	pooledImages.clear();*/
-
-	//Part 2: Filtering
-	 /*vector<int> filteredPlainImage;
-	 filteredPlainImage = filterPlainImage(stridex, stridey, filterSize, width,
-	 length, plainImage, filters[1]);
-	 FHE_NTIMER_START(fil1);
-	 vector<vector<Ctxt>> filteredImages1;
-	 vector<Ctxt> filteredImage;
-	 filteredImages1.push_back(filteredImage);
-	 filterEncryptedImage(stridex, stridey, filterSize, width, length, encImage,
-	 filters[1], zero, ref(filteredImages1), 0);
-	 FHE_NTIMER_STOP(fil1);
-	 tmp = getTimerByName("fil1");
-	 times = tmp->getTime();
-	 cout << "Time for 1 filter = " << times << endl;
-
-//	 filteredImage = filteredImages1[0];
-//	 cout << "Compare Filtered Images" << endl;
-//	 for (unsigned int i = 0; i < filteredImage.size(); i++) {
-//		 ZZX pt;
-//	 	 secretKey.Decrypt(pt, filteredImage[i]);
-//	 	 cout << pt[0] << " " << filteredPlainImage[i] << endl;
-//	 }
-//	 filteredImage.clear();
-	 filteredPlainImage.clear();
-	 filteredImages1.clear();*/
-	/**** end ****/
-
-	int noOfFilters = 20;
+	//Conv
+	int noOfFilters = 32;
 
 	cout << "Conv start ... " << flush;
 	cout << "Filters: " << noOfFilters << "..." << flush;
@@ -455,52 +406,52 @@ int main(void) {
 	cout << "# Size after conv: " << convOut1[0].size() << endl;
 	cout << "# Depth after conv: " << convOut1.size() << endl;
 
-	cout << "Pool start ... " << flush;
+	//Activation
+	cout << "Activation start ... " << flush;
 
-	width = 26;
-	length = 26;
+	width = 30;
+	length = 30;
 
-	FHE_NTIMER_START(pool1);
+	FHE_NTIMER_START(act1);
 
-	vector<vector<Ctxt>> poolOut1;
+	vector<vector<Ctxt>> actOut1;
 
 	for (unsigned int i = 0; i < convOut1.size(); i++) {
-		vector<Ctxt> pooledImage;
-		poolOut1.push_back(pooledImage);
+		vector<Ctxt> actImage;
+		actOut1.push_back(actImage);
 	}
 	thread *tt = new thread[convOut1.size()];
 	for (unsigned int i = 0; i < convOut1.size(); i++) {
-		tt[i] = thread(poolEncryptedImage, poolSize, width, length, convOut1[i], zero,
-				ref(poolOut1), i);
+		tt[i] = thread(activateEncryptedImage, convOut1[i], ref(actOut1), i);
 	}
-	for (unsigned int i = 0; i < convOut1.size(); i++) {
+	for(unsigned int i=0; i <convOut1.size(); i++){
 		tt[i].join();
 	}
 	convOut1.clear();
-	FHE_NTIMER_STOP(pool1);
-	tmp = getTimerByName("pool1");
+	FHE_NTIMER_STOP(act1);
+	tmp = getTimerByName("act1");
 	times = tmp->getTime();
 	cout << "end" << endl;
-	cout << "# Time for Pool: " << times << endl;
-	cout << "# Size after pool: " << poolOut1[0].size() << endl;
-	cout << "# Depth after pool: " << poolOut1.size() << endl;
+	cout << "# Time for Act: " << times << endl;
 
-	noOfFilters = 50;
+
+	//Conv
+	noOfFilters = 32;
 	cout << "Conv start ... " << flush;
 	cout << "Filters: " << noOfFilters << "..." << flush;
-	width = 13;
-	length = 13;
+	width = 30;
+	length = 30;
 
 	FHE_NTIMER_START(conv2);
 
 	vector<vector<Ctxt>> convOut2;
 	convOperationParallel(stridex, stridey, filterSize, width, length,
-					poolOut1[0], noOfFilters, filters, zero, ref(convOut2));
-	for (unsigned int i = 1; i < poolOut1.size(); i++) {
+			actOut1[0], noOfFilters, filters, zero, ref(convOut2));
+	for (unsigned int i = 1; i < actOut1.size(); i++) {
 		convOperationParallelAdd(stridex, stridey, filterSize, width, length,
-				poolOut1[i], noOfFilters, filters, zero, ref(convOut2));
+				actOut1[i], noOfFilters, filters, zero, ref(convOut2));
 	}
-	poolOut1.clear();
+	actOut1.clear();
 	FHE_NTIMER_STOP(conv2);
 	tmp = getTimerByName("conv2");
 	times = tmp->getTime();
@@ -508,34 +459,144 @@ int main(void) {
 	cout << "Size after conv: " << convOut2[0].size() << endl;
 	cout << "Depth after conv: " << convOut2.size() << endl;
 
-	cout << "Pool start ... " << flush;
+	//Activation
+	cout << "Activation start ... " << flush;
 
-	width = 11;
-	length = 11;
+	width = 28;
+	length = 28;
 
-	FHE_NTIMER_START(pool2);
+	FHE_NTIMER_START(act2);
 
-	vector<vector<Ctxt>> poolOut2;
-	//poolOperationParallel(poolSize, width, length, zero, convOut1, ref(poolOut1));
+	vector<vector<Ctxt>> actOut2;
 
 	for (unsigned int i = 0; i < convOut2.size(); i++) {
-		vector<Ctxt> pooledImage;
-		poolOut2.push_back(pooledImage);
+		vector<Ctxt> actImage;
+		actOut2.push_back(actImage);
 	}
 	tt = new thread[convOut2.size()];
 	for (unsigned int i = 0; i < convOut2.size(); i++) {
-		tt[i] = thread(poolEncryptedImage, poolSize, width, length, convOut2[i], zero, ref(poolOut2), i);
+		tt[i] = thread(activateEncryptedImage, convOut2[i], ref(actOut2), i);
 	}
 	for(unsigned int i=0; i <convOut2.size(); i++){
 		tt[i].join();
 	}
 	convOut2.clear();
-	FHE_NTIMER_STOP(pool2);
-	tmp = getTimerByName("pool2");
+	FHE_NTIMER_STOP(act2);
+	tmp = getTimerByName("act2");
 	times = tmp->getTime();
 	cout << "end" << endl;
-	cout << "# Time for Pool: " << times << endl;
-	cout << "# Depth after pool: " << poolOut2.size() << endl;
-	cout << "# Size after pool: " << poolOut2[0].size() << endl;
+	cout << "# Time for Act: " << times << endl;
+
+	//Conv
+	noOfFilters = 64;
+	cout << "Conv start ... " << flush;
+	cout << "Filters: " << noOfFilters << "..." << flush;
+	width = 28;
+	length = 28;
+
+	FHE_NTIMER_START(conv3);
+
+	vector<vector<Ctxt>> convOut3;
+	convOperationParallel(stridex, stridey, filterSize, width, length,
+			actOut2[0], noOfFilters, filters, zero, ref(convOut3));
+	for (unsigned int i = 1; i < actOut2.size(); i++) {
+		convOperationParallelAdd(stridex, stridey, filterSize, width, length,
+				actOut2[i], noOfFilters, filters, zero, ref(convOut3));
+	}
+	actOut2.clear();
+	FHE_NTIMER_STOP(conv3);
+	tmp = getTimerByName("conv3");
+	times = tmp->getTime();
+	cout << "Time for conv = " << times << endl;
+	cout << "Size after conv: " << convOut3[0].size() << endl;
+	cout << "Depth after conv: " << convOut3.size() << endl;
+
+	//Conv
+	noOfFilters = 64;
+	cout << "Conv start ... " << flush;
+	cout << "Filters: " << noOfFilters << "..." << flush;
+	width = 26;
+	length = 26;
+
+	FHE_NTIMER_START(conv4);
+
+	vector<vector<Ctxt>> convOut4;
+	convOperationParallel(stridex, stridey, filterSize, width, length,
+			convOut3[0], noOfFilters, filters, zero, ref(convOut4));
+	for (unsigned int i = 1; i < convOut3.size(); i++) {
+		convOperationParallelAdd(stridex, stridey, filterSize, width, length,
+				convOut3[i], noOfFilters, filters, zero, ref(convOut4));
+	}
+	convOut3.clear();
+	FHE_NTIMER_STOP(conv4);
+	tmp = getTimerByName("conv4");
+	times = tmp->getTime();
+	cout << "Time for conv = " << times << endl;
+	cout << "Size after conv: " << convOut4[0].size() << endl;
+	cout << "Depth after conv: " << convOut4.size() << endl;
+
+	//Activation
+	cout << "Activation start ... " << flush;
+
+	width = 24;
+	length = 24;
+
+	FHE_NTIMER_START(act3);
+
+	vector<vector<Ctxt>> actOut3;
+	//poolOperationParallel(poolSize, width, length, zero, convOut1, ref(poolOut1));
+
+	for (unsigned int i = 0; i < convOut4.size(); i++) {
+		vector<Ctxt> actImage;
+		actOut3.push_back(actImage);
+	}
+	tt = new thread[convOut4.size()];
+	for (unsigned int i = 0; i < convOut4.size(); i++) {
+		tt[i] = thread(activateEncryptedImage, convOut4[i], ref(actOut3), i);
+	}
+	for(unsigned int i=0; i <convOut4.size(); i++){
+		tt[i].join();
+	}
+	convOut4.clear();
+	FHE_NTIMER_STOP(act3);
+	tmp = getTimerByName("act3");
+	times = tmp->getTime();
+	cout << "end" << endl;
+	cout << "# Time for Act: " << times << endl;
+
+	//Conv
+	noOfFilters = 10;
+	cout << "Conv start ... " << flush;
+	cout << "Filters: " << noOfFilters << "..." << flush;
+	width = 24;
+	length = 24;
+
+	FHE_NTIMER_START(conv5);
+
+	vector<vector<Ctxt>> convOut5;
+	convOperationParallel(stridex, stridey, filterSize, width, length,
+			convOut4[0], noOfFilters, filters, zero, ref(convOut5));
+	for (unsigned int i = 1; i < convOut4.size(); i++) {
+		convOperationParallelAdd(stridex, stridey, filterSize, width, length,
+				convOut4[i], noOfFilters, filters, zero, ref(convOut5));
+	}
+	convOut4.clear();
+	FHE_NTIMER_STOP(conv5);
+	tmp = getTimerByName("conv5");
+	times = tmp->getTime();
+	cout << "Time for conv = " << times << endl;
+	cout << "Size after conv: " << convOut5[0].size() << endl;
+	cout << "Depth after conv: " << convOut5.size() << endl;
+
+	//Global average
+	Ctxt finalctx(publicKey);
+	publicKey.Encrypt(finalctx, to_ZZX(0));
+	for (unsigned int i = 0; i < convOut5.size(); i++){
+		for (unsigned int j = 0; j < convOut5[i].size(); j++) {
+			finalctx.addCtxt(convOut5[i][j]);
+		}
+	}
+
+	convOut5.clear();
 	return 0;
 }

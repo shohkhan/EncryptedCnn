@@ -455,6 +455,16 @@ int main(void) {
 	cout << "# Size after conv: " << convOut1[0].size() << endl;
 	cout << "# Depth after conv: " << convOut1.size() << endl;
 
+//	for (int i=0; i < noOfFilters; i++){
+//		vector<Ctxt> filteredImage = convOut1[i];
+//		for (unsigned int i = 0; i < 5; i++) {
+//			ZZX pt;
+//			secretKey.Decrypt(pt, filteredImage[i]);
+//			cout << pt[0] << " " << flush;
+//		}
+//		cout << endl;
+//	}
+
 	cout << "Pool start ... " << flush;
 
 	width = 26;
@@ -463,6 +473,7 @@ int main(void) {
 	FHE_NTIMER_START(pool1);
 
 	vector<vector<Ctxt>> poolOut1;
+	//poolOperationParallel(poolSize, width, length,zero, convOut1, ref(poolOut1));
 
 	for (unsigned int i = 0; i < convOut1.size(); i++) {
 		vector<Ctxt> pooledImage;
@@ -472,6 +483,7 @@ int main(void) {
 	for (unsigned int i = 0; i < convOut1.size(); i++) {
 		tt[i] = thread(poolEncryptedImage, poolSize, width, length, convOut1[i], zero,
 				ref(poolOut1), i);
+		//poolEncryptedImage(poolSize, width, length, convOut1[i], ref(poolOut1), i);
 	}
 	for (unsigned int i = 0; i < convOut1.size(); i++) {
 		tt[i].join();
@@ -484,6 +496,16 @@ int main(void) {
 	cout << "# Time for Pool: " << times << endl;
 	cout << "# Size after pool: " << poolOut1[0].size() << endl;
 	cout << "# Depth after pool: " << poolOut1.size() << endl;
+
+//	for (int i=0; i < 5; i++){
+//		vector<Ctxt> filteredImage = poolOut1[i];
+//		for (unsigned int i = 0; i < 5; i++) {
+//			ZZX pt;
+//			secretKey.Decrypt(pt, filteredImage[i]);
+//			cout << pt[0] << " " << flush;
+//		}
+//		cout << endl;
+//	}
 
 	noOfFilters = 50;
 	cout << "Conv start ... " << flush;
@@ -507,6 +529,16 @@ int main(void) {
 	cout << "Time for conv = " << times << endl;
 	cout << "Size after conv: " << convOut2[0].size() << endl;
 	cout << "Depth after conv: " << convOut2.size() << endl;
+
+//	for (unsigned int i=0; i < convOut2[1].size(); i++){
+//		vector<Ctxt> filteredImage = convOut2[1];
+//		for (unsigned int i = 0; i < 5; i++) {
+//			ZZX pt;
+//			secretKey.Decrypt(pt, filteredImage[i]);
+//			cout << pt[0] << " " << flush;
+//		}
+//		cout << endl;
+//	}
 
 	cout << "Pool start ... " << flush;
 
